@@ -6,7 +6,7 @@
  */
 $host = "wsushuttle.db.11042423.hostedresource.com";
 $uname = "wsushuttle";
-$pass = "Senior22@";
+$pass = "****";
 $dbname = "wsushuttle";
 
 //Table names
