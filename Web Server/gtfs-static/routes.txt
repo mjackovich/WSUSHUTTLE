@@ -1,0 +1,3 @@
+route_id,route_short_name,route_long_name,route_type,route_color
+32b86f75-c034-4405-a0b1-c2cb7fc0cf08,,Main Campus,3,#2b00a1
+8b7fe932-b515-432c-8c64-7adbcec53e09,,Medical School,3,#000
