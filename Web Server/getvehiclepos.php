@@ -7,7 +7,7 @@ include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/Descriptor.php');
 include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/Field.php');
 include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/Enum.php');
 
-//include_once(__DIR__ . '/../classes/gtfs-realtime.php');
+include_once(__DIR__ . '/includes/gtfs-realtime.php');
 include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/CodecInterface.php');
 include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/Codec/PhpArray.php');
 include_once(__DIR__ . '/PEAR/PEAR/DrSlump/Protobuf/Codec/Binary.php');
@@ -30,8 +30,8 @@ function GetGTFSReal($url, $save_location){
 }
 
 // Check time of file, if it's more than 2 seconds get the newest file
-$file_path = __DIR__ . '/gtfs-real/;
-$file = "'gtfsrealtime.bin'";
+$file_path = __DIR__ . '/gtfs-real/';
+$file = 'gtfsrealtime.bin';
 
 if(!file_exists($file_path . $file) || filesize($file_path . $file) == 0 || (strtotime('now') >= filemtime($file_path . $file) + 2)){
 	GetGTFSReal(GTFS_REALTIME, $file_path . $file);
@@ -80,6 +80,8 @@ if(isset($_GET['debug'])){
 	echo '</pre>';	
 }
 
-header('Content-type: application/json');
-echo json_encode($gtfs_return);
+	
+	header('Content-type: application/json');
+	echo json_encode($gtfs_return);
+
 ?>
