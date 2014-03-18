@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLfzgJ9vybErsmh2_nr48Z83P3NTq8PPo&sensor=true">
+    </script>
+    <script type="text/javascript">
+      function initialize() {
+		var bus=new Boolean();
+		bus=false;
+          var infoWindow = new google.maps.InfoWindow();
+          var mapOptions = {
+              center: new google.maps.LatLng(42.3573, -83.0701),
+              zoom: 15
+          };
+          var map = new google.maps.Map(document.getElementById("map-canvas"),
+                  mapOptions);
+        //Used to get the routes
+        var data_file = "/getvehiclepos.php";
+        var http_request = new XMLHttpRequest();
+        try{
+            // Opera 8.0+, Firefox, Chrome, Safari
+            http_request = new XMLHttpRequest();
+        }catch (e){
+            // Internet Explorer Browsers
+            try{
+                http_request = new ActiveXObject("Msxml2.XMLHTTP");
+            }catch (e) {
+                try{
+                    http_request = new ActiveXObject("Microsoft.XMLHTTP");
+                }catch (e){
+                    // Something went wrong
+                    alert("Their is something wrong with your browser. Please use a different one and try again.");
+                    return false;
+                }
+            }
+       }
+        http_request.onreadystatechange  = function(){
+            if (http_request.readyState == 4  )
+            {
+                // Javascript function JSON.parse to parse JSON data
+                var jsonObj = JSON.parse(http_request.responseText);
+                //alert("ID 1: " + jsonObj[0].latitude);
+				var myLatLng = new google.maps.LatLng( jsonObj[0].latitude, jsonObj[0].longitude );
+				if (bus == false){
+					marker = new google.maps.Marker( {position: myLatLng, map: map} );
+					bus = true;
+				}
+				marker.setMap( map );
+				moveMarker( map, marker, jsonObj[0].latitude, jsonObj[0].longitude);
+				setInterval(refreshPage(data_file), 3000);
+            }
+        }
+		//setInterval(refreshPage(data_file), 3000);
+		refreshPage(data_file);
+		function refreshPage(data_file){
+        http_request.open("GET", data_file, true);
+        http_request.send();
+		}
+		
+    //    http_request.open("GET", data_file, true);
+    //    http_request.send();
+		
+		/*
+		//Grabs the user's location - confirmed - working.
+				  // Try HTML5 geolocation
+		  if(navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(function(position) {
+			  var geo_pos = new google.maps.LatLng(position.coords.latitude,
+											   position.coords.longitude);
+
+			  var geo_infowindow = new google.maps.InfoWindow({
+				map: map,
+				position: geo_pos,
+				content: 'I am here.'
+			  });
+			  map.setCenter(geo_pos);
+			}, function() {
+			  handleNoGeolocation(true);
+			});
+		  } else {
+			// Browser doesn't support Geolocation
+			handleNoGeolocation(false);
+		  }
+		  */
+		}
+
+function moveMarker( map, marker, latitude, longitude ) {
+    
+    //delayed so you can see it move
+    setTimeout( function(){ 
+    
+        marker.setPosition( new google.maps.LatLng( latitude, longitude ) );
+        map.panTo( new google.maps.LatLng( latitude, longitude ) );
+        
+    }, 1500 );
+
+};		
+function handleNoGeolocation(errorFlag) {
+  if (errorFlag) {
+    var content = 'Error: The Geolocation service failed.';
+  } else {
+    var content = 'Error: Your browser doesn\'t support geolocation.';
+  }
+
+  var geo_options = {
+    map: map,
+    position: new google.maps.LatLng(42.3573, -83.0701),
+    content: content
+  };
+
+  var _infowindow = new google.maps.InfoWindow(geo_options);
+  map.setCenter(geo_options.position);
+}
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"/>
+  </body>
+</html>

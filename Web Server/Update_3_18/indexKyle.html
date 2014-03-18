@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLfzgJ9vybErsmh2_nr48Z83P3NTq8PPo&sensor=true">
+    </script>
+        <script type="text/javascript">
+        function initialize() {
+        var stops = Array();
+        var infoWindow = new google.maps.InfoWindow();
+        var mapOptions = {
+            center: new google.maps.LatLng(42.3573, -83.0701),
+            zoom: 16
+        };
+        var map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
+        //var url = window.location.href;
+        //alert("Url is: " + location.protocol + "//" + location.host);
+        //Used to get the routes
+        var script = location.protocol + "//" + location.host + "/getGTFSStaticDB.php?op=";
+        //alert(document.URL);
+        //alert("Script link: " + script);
+        var links = new Array(
+                "http://maps.googleapis.com/maps/api/directions/json?origin=Toronto&destination=Montreal&sensor=false",
+                "getShapes",
+                "getStops",
+                "Trips");
+        var data_request = new Array(4);
+        for(var i = 0; i < data_request.length; i++){
+            try{
+                data_request[i] = new XMLHttpRequest();                     // Opera 8.0+, Firefox, Chrome, Safari
+            }catch(e){
+                // Internet Explorer Browsers
+                try{
+                    data_request[i] = new ActiveXObject("Msxml2.XMLHTTP");
+                }catch (e) {
+                    try{
+                        data_request[i] = new ActiveXObject("Microsoft.XMLHTTP");
+                    }catch (e){
+                        // Something went wrong
+                        alert("Their is something wrong with your browser. Please use a different one and try again.");
+                        return false;
+                    }
+                }
+            }
+        }
+        //Used for building the shapes/routes
+        data_request[1].onreadystatechange = function(){
+            if (data_request[1].readyState == 4  ){
+                var points = [];
+                var scale = Math.pow(2, map.getZoom());
+                var projection = map.getProjection();
+                var jsonObj = JSON.parse(data_request[1].responseText);
+                for(var i = 0; i < jsonObj.length; i++){
+                    var point = new google.maps.LatLng(jsonObj[i].pt_lat, jsonObj[i].pt_lon);
+                    var worldCoordinate = projection.fromLatLngToPoint(point);
+                    //worldCoordinate.x += (line[i].offset * 5) / scale;
+                    //worldCoordinate.y += (line[i].offset * 5) / scale;
+                    point = projection.fromPointToLatLng(worldCoordinate);
+                    points.push(point);
+                }
+                var weight = 4 - Math.min(Math.max(0, 15 - map.getZoom()), 3);
+                //alert("You are here");
+                var routeOverlay = new google.maps.Polyline({
+                    path: points,
+                    strokeColor: "#cc00cc",
+                    strokeOpacity: 0.5,
+                    strokeWeight: weight,
+                    map: map
+                });
+            }
+        }
+        //Used for building the stops
+        data_request[2].onreadystatechange  = function(){
+            if (data_request[2].readyState == 4  )
+            {
+                // Javascript function JSON.parse to parse JSON data
+                var jsonObj = JSON.parse(data_request[2].responseText);
+                //alert("Total Stops are: " + jsonObj.length);
+                for(var i = 0; i < jsonObj.length; i++){
+                    var stopOverlay = new google.maps.Circle({
+                        center: new google.maps.LatLng(jsonObj[i].lat, jsonObj[i].lon),
+                        radius: 13,
+                        strokeColor: "#0C5449",
+                        fillColor: "#FF0000",
+                        fillOpacity: 1.0,
+                        strokeWeight: 1,
+                        map: map,
+                        zIndex: 50
+                    });
+                    var stopInfo = new google.maps.event.addListener(stopOverlay, 'click',setInfoText(jsonObj[i].lat, jsonObj[i].lon, jsonObj[i].name, jsonObj[i].desc));
+                    function setInfoText(lat, long, name, desc){
+                        return function() {
+                            infoWindow.setPosition(new google.maps.LatLng(lat, long));
+                            var info = "<div style='height:100px;width:300px;'><h3>" + name + "</h3><p>" + desc + "</p></div>";
+                            infoWindow.setContent(info);
+                            infoWindow.open(map);
+                        };
+                    }
+                    var tmpItem = {'stopMarker':stopOverlay, "infoParts":{"lat":jsonObj[i].lat, "lon":jsonObj[i].lon, "name":jsonObj[i].name, "desc":jsonObj[i].desc}, 'queryTries':0};
+                    stops.push(tmpItem);
+                }
+                calcRoute(stops);
+            }
+        }
+        data_request[1].open("GET", script + links[1], true);
+        data_request[1].send();
+        data_request[2].open("GET", script + links[2], true);
+        data_request[2].send();
+        //USed to get the directions of a route
+        var directionsDisplay = new google.maps.DirectionsRenderer();
+        //var chicago = new google.maps.LatLng(41.850033, -87.6500523);
+
+        //map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+        directionsDisplay.setMap(map);
+
+        function calcRoute(allStops) {
+            //alert("Building the route calculation");
+            //var outputBox = document.getElementById("output");
+            //outputBox.innerText = "First stop is: " + allStops[0].infoParts.name;
+            //alert("The number of stops you are about to calculate the eta for is: " + allStops.length);
+            for(var j = 0; j < allStops.length; j++){
+                //alert("First lat is: " + allStops[0].stopMarker.getCenter().lat());
+                var start = new google.maps.LatLng(allStops[0].stopMarker.getCenter().lat(),allStops[0].stopMarker.getCenter().lng());
+                var end = new google.maps.LatLng(allStops[j].stopMarker.getCenter().lat(),allStops[j].stopMarker.getCenter().lng());
+                var request = {
+                    origin:start,
+                    destination:end,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+                //alert("Making the request");
+                /*
+                 if(allStops[j].infoParts.name === 'Lot 11'){
+                 alert("About to process the eta for: " + allStops[j].infoParts.name + ". The sequence is: " + j + " . About to calculate the eta");
+                 }*/
+                set_eta(request, allStops[j]);
+            }
+        }
+        //Calculates the eta for all stops
+        function set_eta(requestData, stopData){
+            var directionsService = new google.maps.DirectionsService();
+            directionsService.route(requestData, function(response, status){
+                //alert("Checking request status");
+                if (status == google.maps.DirectionsStatus.OK && stopData.queryTries < 100) {
+                    //var jsonObj = JSON.parse(response.responseText);
+                    //directionsDisplay.setDirections(response);
+                    //alert("About to process the driection service data");
+                    var date = new Date(response.routes[0].legs[0].duration.value * 1000);
+                    var hh = date.getUTCHours();
+                    var mm = date.getUTCMinutes();
+                    var ss = date.getSeconds();
+                    // This line gives you 12-hour (not 24) time
+                    if (hh > 12) {hh = hh - 12;}
+                    // These lines ensure you have two-digits
+                    if (hh < 10) {hh = "0"+hh;}
+                    if (mm < 10) {mm = "0"+mm;}
+                    if (ss < 10) {ss = "0"+ss;}
+                    // This formats your string to HH:MM:SS
+                    var t = hh+":"+mm+":"+ss;
+                    //if(stopData.infoParts.name === 'Lot 11'){
+                    //alert("Eta calculated for : " + stopData.infoParts.name + ". Should see it on the map.");
+                    //}
+                    stopData.queryTries = 0;
+                    var stopInfo = new google.maps.event.addListener(stopData.stopMarker, 'click',setInfoText(stopData.infoParts.lat, stopData.infoParts.lon, stopData.infoParts.name, stopData.infoParts.desc, t));
+                    function setInfoText(lat, long, name, desc, time){
+                        return function() {
+                            infoWindow.setPosition(new google.maps.LatLng(lat, long));
+                            var info = "<div style='height:100px;width:300px;'><h3>" + name + "</h3><p>" + desc + "</p><p>ETA: " + time + "</p></div>";
+                            infoWindow.setContent(info);
+                            infoWindow.open(map);
+                        }
+                    }
+                    //alert("Status: " + jsonObj.status);
+                }else{
+                    if(stopData.queryTries < 100){
+                        stopData.queryTries++;
+                        //alert("Trying for the: " + stopData.queryTries + " time.");
+                        setTimeout(function(){set_eta(requestData, stopData);}, 500);
+                    }else{
+                        alert("timed out for: " + stopData.infoParts.name);
+                    }
+                }
+            });
+        }
+		//Below adds bus to map
+		var bus=new Boolean();
+        bus=false;
+        var data_file2 = "getvehiclepos.php";
+        var http_request2 = new XMLHttpRequest();
+        try{
+            // Opera 8.0+, Firefox, Chrome, Safari
+            http_request2 = new XMLHttpRequest();
+        }catch (e){
+            // Internet Explorer Browsers
+            try{
+                http_request2 = new ActiveXObject("Msxml2.XMLHTTP");
+            }catch (e) {
+                try{
+                    http_request2 = new ActiveXObject("Microsoft.XMLHTTP");
+                }catch (e){
+                    // Something went wrong
+                    alert("Their is something wrong with your browser. Please use a different one and try again.");
+                    return false;
+                }
+            }
+       }
+        http_request2.onreadystatechange  = function(){
+      if (http_request2.readyState == 4  ){
+        var jsonObjV = JSON.parse(http_request2.responseText);
+        var myLatLng = new google.maps.LatLng( jsonObjV[0].latitude, jsonObjV[0].longitude );
+        if (bus == false){
+          marker = new google.maps.Marker( {position: myLatLng, map: map, icon: 'bus.png'});
+          bus = true;
+        }
+        marker.setMap( map );
+        moveMarker( map, marker, jsonObjV[0].latitude, jsonObjV[0].longitude);
+            }
+        };
+		refreshbus();
+		setInterval(refreshbus,3000);
+		
+	function refreshbus(){
+        http_request2.open("GET", data_file2, true);
+        http_request2.send();
+		}
+
+	function moveMarker( map, marker, latitude, longitude ) {
+	
+       marker.setPosition( new google.maps.LatLng( latitude, longitude ) )		
+}
+
+      }
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"/>
+  </body>
+</html>

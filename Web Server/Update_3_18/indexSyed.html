@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLfzgJ9vybErsmh2_nr48Z83P3NTq8PPo&sensor=true">
+    </script>
+    <script type="text/javascript">
+      function initialize() {
+          var infoWindow = new google.maps.InfoWindow();
+          var mapOptions = {
+              center: new google.maps.LatLng(42.3573, -83.0701),
+              zoom: 15
+          };
+          var map = new google.maps.Map(document.getElementById("map-canvas"),
+                  mapOptions);
+
+          var myLatlng = new google.maps.LatLng(42.3573, -83.0701);
+          var marker = new google.maps.Marker({
+              position: myLatlng,
+              map: map,
+              title:"Hello World!"
+          });
+        //Used to get the routes
+        var data_file = "/getGTFSStaticDB.php?op=getStops";
+        var http_request = new XMLHttpRequest();
+        try{
+            // Opera 8.0+, Firefox, Chrome, Safari
+            http_request = new XMLHttpRequest();
+        }catch (e){
+            // Internet Explorer Browsers
+            try{
+                http_request = new ActiveXObject("Msxml2.XMLHTTP");
+            }catch (e) {
+                try{
+                    http_request = new ActiveXObject("Microsoft.XMLHTTP");
+                }catch (e){
+                    // Something went wrong
+                    alert("Their is something wrong with your browser. Please use a different one and try again.");
+                    return false;
+                }
+            }
+       }
+	    var data_file2 = "/getGTFSStaticDB.php?op=getStops";
+        var http_request2 = new XMLHttpRequest();
+        try{
+            // Opera 8.0+, Firefox, Chrome, Safari
+            http_request2 = new XMLHttpRequest();
+        }catch (e){
+            // Internet Explorer Browsers
+            try{
+                http_request2 = new ActiveXObject("Msxml2.XMLHTTP");
+            }catch (e) {
+                try{
+                    http_request2 = new ActiveXObject("Microsoft.XMLHTTP");
+                }catch (e){
+                    // Something went wrong
+                    alert("Their is something wrong with your browser. Please use a different one and try again.");
+                    return false;
+                }
+            }
+       }
+        http_request.onreadystatechange  = function(){
+            if (http_request.readyState == 4  )
+            {
+                // Javascript function JSON.parse to parse JSON data
+                var jsonObj = JSON.parse(http_request.responseText);
+                //alert("ID 1: " + jsonObj[0].id);
+                for(var i = 0; i < jsonObj.length; i++){
+                    var stopOverlay = new google.maps.Circle({
+                        center: new google.maps.LatLng(jsonObj[i].lat, jsonObj[i].lon),
+                        radius: 13,
+                        strokeColor: "#0C5449",
+                        fillColor: "#FF0000",
+                        fillOpacity: 1.0,
+                        strokeWeight: 1,
+                        map: map,
+                        zIndex: 50
+                    });
+					
+					var stopInfo = new google.maps.event.addListener(stopOverlay, 'click',setInfoText(jsonObj[i].lat, jsonObj[i].lon, jsonObj[i].name, jsonObj[i].desc));
+                    function setInfoText(lat, long, name, desc){
+                        return function() {
+                            infoWindow.setPosition(new google.maps.LatLng(lat, long));
+                            var info = "<div style='height:100px;width:300px;'><h3>" + name + "</h3><p>" + desc + "</p></div>";
+                            infoWindow.setContent(info);
+                            infoWindow.open(map);
+                        };
+                    }
+                }
+		
+            }
+        }
+		http_request.open("GET", data_file, true);
+        http_request.send();
+		
+		http_request2.onreadystatechange  = function(){
+             if (http_request2.readyState == 4  )
+            {
+                // Javascript function JSON.parse to parse JSON data
+                var jsonObj2 = JSON.parse(http_request2.responseText);
+                //alert("ID 1: " + jsonObj2[0].id);
+                for(var i = 0; i < jsonObj2.length; i++){
+					var flightPath = new google.maps.Polyline({
+						path:  new google.maps.LatLng(jsonObj2[i].lat, jsonObj2[i].lon),
+						geodesic: true,
+						strokeColor: '#FF0000',
+						strokeOpacity: 1.0,
+						strokeWeight: 2
+					});
+				
+				}
+			}
+			flightPath.setMap(map);
+		}
+		
+        http_request2.open("GET", data_file2, true);
+        http_request2.send(); 
+		
+		/*
+		//Grabs the user's location - confirmed - working.
+				  // Try HTML5 geolocation
+		  if(navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(function(position) {
+			  var geo_pos = new google.maps.LatLng(position.coords.latitude,
+											   position.coords.longitude);
+
+			  var geo_infowindow = new google.maps.InfoWindow({
+				map: map,
+				position: geo_pos,
+				content: 'I am here.'
+			  });
+			  map.setCenter(geo_pos);
+			}, function() {
+			  handleNoGeolocation(true);
+			});
+		  } else {
+			// Browser doesn't support Geolocation
+			handleNoGeolocation(false);
+		  }
+		  */
+		}
+		
+		
+function handleNoGeolocation(errorFlag) {
+  if (errorFlag) {
+    var content = 'Error: The Geolocation service failed.';
+  } else {
+    var content = 'Error: Your browser doesn\'t support geolocation.';
+  }
+
+  var geo_options = {
+    map: map,
+    position: new google.maps.LatLng(42.3573, -83.0701),
+    content: content
+  };
+
+  var _infowindow = new google.maps.InfoWindow(geo_options);
+  map.setCenter(geo_options.position);
+}
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"/>
+  </body>
+</html>
